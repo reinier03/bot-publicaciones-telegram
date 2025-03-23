@@ -31,8 +31,7 @@ telebot.apihelper.ENABLE_MIDDLEWARE = True
 bot=telebot.TeleBot(os.environ["token"], "html", disable_web_page_preview=True)
 
 
-# admin = int(os.environ["admin"])
-admin = 1259506390
+admin = int(os.environ["admin"])
 lote_publicaciones={} 
 lista_canales=[]
 lista_seleccionada=[]
