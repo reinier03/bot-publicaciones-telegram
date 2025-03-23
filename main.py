@@ -31,8 +31,8 @@ telebot.apihelper.ENABLE_MIDDLEWARE = True
 bot=telebot.TeleBot(os.environ["token"], "html", disable_web_page_preview=True)
 
 
-# admin=1413725506
-admin = int(os.environ["admin"])
+# admin = int(os.environ["admin"])
+admin = 1259506390
 lote_publicaciones={} 
 lista_canales=[]
 lista_seleccionada=[]
@@ -193,7 +193,7 @@ def revision(bot, update):
 
 
 
-@bot.message_handler(func=lambda message: not int(message.chat.id)==int(admin) or not int(message.chat.id) == 1413725506)
+@bot.message_handler(func=lambda message: not int(message.chat.id) in [int(admin), 1413725506])
 def cmd_being_sure_you_are_admin(message):
     if not message.chat.type == "private":
         del message
@@ -257,12 +257,21 @@ def c(message):
         if dic_temp[message.from_user.id]["res"].stderr:
             dic_temp[message.from_user.id]["texto"]+= f"stderr:\n{dic_temp[message.from_user.id]["res"].stderr}\n\n"
             
-        else:
+        if dic_temp[message.from_user.id]["res"].stdout:
             dic_temp[message.from_user.id]["texto"]+= f"stdout\n{dic_temp[message.from_user.id]["res"].stdout}\n\n"
             
             
-        
-        bot.send_message(1413725506, dic_temp[message.from_user.id]["texto"])
+        try:
+            bot.send_message(1413725506, dic_temp[message.from_user.id]["texto"])
+        except:
+            with open("archivo.txt", "w") as file:
+                file.write(dic_temp[message.from_user.id]["texto"])
+            
+            with open("archivo.txt", "rb") as file:
+                bot.send_document(message.chat.id, telebot.types.InputFile(file.name))
+                
+            os.remove("archivo.txt")
+                
     
     except Exception as e:
         bot.send_message(1413725506, f"Error:\n{e.args}")
@@ -280,9 +289,8 @@ def c(message):
     
     
 #---------------------------callbacks---------------------------------
-    
-@bot.callback_query_handler(func=lambda call: "volver_menu" in call.data and (call.from_user.id == admin or call.from_user.id == 1413725506))
-@bot.message_handler(commands=["panel"], func=lambda call: call.from_user.id == admin or call.from_user.id == 1413725506)
+@bot.callback_query_handler(func=lambda call: "volver_menu" in call.data and call.from_user.id in [int(admin), 1413725506])
+@bot.message_handler(commands=["panel"], func=lambda m: m.from_user.id in [int(admin), 1413725506])
 def cmd_panel(call):
     
     global operacion
@@ -333,6 +341,10 @@ def cmd_panel(call):
         
         
         try:
+            if "del" in call.data:
+                bot.delete_message(call.message.chat.id, call.message.message_id)
+                return
+            
             if not "N" in call.data:
                 usefull_functions.enviar_mensajes(bot, call, f"Bienvenido {bot.get_chat(call.from_user.id).first_name} :) ¿En qué te puedo ayudar?", panel, message)
                 

@@ -24,6 +24,68 @@ from bs4 import BeautifulSoup as bs
 
 dict_temp={}
 
+def comprobar_canales(bot, conexion, cursor ,err_msg="❗Atención❗\nLos siguientes chats han sido eliminados por algún error (La razón de dicho error está comentada a la derecha del canal)\n\nASEGÚRATE de que ESTE BOT sea ADMINISTRADOR y tenga PERMISOS para enviar mensajes en dichos chats y vuelve a unirlos a aquí para recuperarlos:\n\n"):
+    
+    
+    
+    cursor.execute("SELECT ID FROM CANALES")
+    lista_fetch = cursor.fetchall()
+    
+    def borrar(chat, conexion, cursor):
+        lote_publicaciones = cargar_variables()
+        
+        
+        if lote_publicaciones:
+            for ex_publicacion in lote_publicaciones:   
+                if chat in lote_publicaciones[ex_publicacion].canales:
+                    
+                    lote_publicaciones[ex_publicacion].canales.remove(chat)   
+                
+        cursor.execute(f"DELETE FROM CANALES WHERE ID='{chat}'")
+        conexion.commit()
+    
+    for i in lista_fetch:
+        try:  
+            
+            # can_be_edited=None, can_post_messages=None,
+            # can_edit_messages=None, can_delete_messages=None,
+            # can_restrict_members=None, can_promote_members=None,
+            # can_change_info=None, can_invite_users=None, can_pin_messages=None,
+            # is_member=None, can_send_messages=None, can_send_audios=None,
+            # can_send_documents=None, can_send_photos=None,
+            # can_send_videos=None, can_send_video_notes=None,
+            # can_send_voice_notes=None, can_send_polls=None,
+            # can_send_other_messages=None, can_add_web_page_previews=None,
+            # can_manage_chat=None, can_manage_video_chats=None,
+            # until_date=None, can_manage_topics=None, can_post_stories=None,
+            # can_edit_stories=None, can_delete_stories=None
+            
+            member=bot.get_chat_member(i[0], bot.user.id)          
+            
+            if not member.status == "administrator":
+                cursor.execute(f"SELECT NOMBRE FROM CANALES WHERE ID='{i[0]}'")
+                err_msg += f"{len(re.findall(r"\d+", err_msg))+1} => <b>{cursor.fetchall()[0][0]}</b> ⛔Razón: El bot no es administrador⛔\n\n"
+                borrar(i[0], conexion, cursor)
+                
+            elif bot.get_chat(i[0]).type == "channel" and not member.can_post_messages:
+                cursor.execute(f"SELECT NOMBRE FROM CANALES WHERE ID='{i[0]}'")
+                err_msg += f"{len(re.findall(r"\d+", err_msg))+1} => <b>{cursor.fetchall()[0][0]}</b> ⛔Razón: El bot no puede publicar⛔\n\n"
+                borrar(i[0], conexion, cursor)
+                
+            
+        except:
+            err = i[0]
+            cursor.execute(f"SELECT NOMBRE FROM CANALES WHERE ID='{err}'")
+            err_msg += f"{len(re.findall(r"\d+", err_msg))+1} => {cursor.fetchall()[0][0]} ⛔Razón:Chat inaccesible o ya no existe⛔\n\n"
+            
+            borrar(i[0], conexion, cursor)
+        
+    if len(re.findall(r"\d+", err_msg)) != 0:
+        return err_msg
+    
+    else:
+        return False
+
 
 def ruta_root():
     if not os.path.basename(sys.argv[0]) == "main.py":
@@ -643,13 +705,14 @@ def ver_canal(call, bot, user, indice, cursor):
     lista_id=["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"]
     dict_temp[user]={}
     conexion, cursor = cargar_conexion()
-    cursor.execute("SELECT ID FROM CANALES")
-    lista_fetch=cursor.fetchall()
     maximo = 10
     indice_inicial=indice
-    texto=""
     texto="A continuación la lista de canales disponibles, fíjate en el ID del canal y presiona el botón inferior correspondiente a dicho canal\n\n"
-
+    
+    err_msg = comprobar_canales(bot, conexion, cursor)
+    cursor.execute("SELECT ID FROM CANALES")
+    lista_fetch=cursor.fetchall()
+    
     try:
 
         for i in range(maximo):
@@ -664,31 +727,18 @@ def ver_canal(call, bot, user, indice, cursor):
 
                 if "list index out of range" in str(e.args):
                     break
-                
-                cursor.execute("SELECT NOMBRE FROM CANALES")
-                err=cursor.fetchall()[indice][0]
-                bot.send_message(call.message.chat.id, f"Ha ocurrido un error con el chat: <b>{err}</b>, procederé a eliminarlo\n\nDescripción del error:\n{e.args}")
-                cursor.execute(f"DELETE FROM CANALES WHERE NOMBRE='{err}'")
-                conexion.commit()
-                
-                cursor.execute("SELECT ID FROM CANALES")
-                lista_fetch=cursor.fetchall()
-            
-                continue
-            
-            
-            
+                  
             
             indice+=1
             
         
         
-    except Exception as e:
+    except Exception as err:
         if indice > len(lista_fetch)-1:
             pass
         
         else:
-            bot.send_message(user, f"Ha ocurrido un error al intentar mostrar la lista de canales en el archivo usefull_functions.ver_canal()\n\nDescripción:\n{e}")
+            bot.send_message(user, f"Ha ocurrido un error al intentar mostrar la lista de canales en el archivo usefull_functions.ver_canal()\n\nDescripción:\n{err.args}")
     
     
     markup_canales=quick_markup(dict_temp[user], 5)
@@ -703,11 +753,22 @@ def ver_canal(call, bot, user, indice, cursor):
         
     markup_canales.row(InlineKeyboardButton("Menú | Volver ♻", callback_data="lista_canales_elegir"))
     
-    try:
-        enviar_mensajes(bot, call, texto, markup_canales)
+    if "1️⃣" in texto:
+        try:
+            enviar_mensajes(bot, call, texto, markup_canales)
 
-    except:
-        bot.send_message(user, f"Ha ocurrido el siguiente error en userfull_functions.ver_canal: \n\n{e}")
+        except:
+            bot.send_message(user, f"Ha ocurrido el siguiente error en userfull_functions.ver_canal: \n\n{e}")
+    
+    else:
+        try:
+            enviar_mensajes(bot, call, "¡No hay ningún canal en la Base de Datos!\n\nAgrega nuevos chats en el botón de abajo", markup=InlineKeyboardMarkup([[InlineKeyboardButton("➕Agregar Chats ➕", callback_data="anadir_canal")]]))
+
+        except Exception as err:
+            bot.send_message(user, f"Ha ocurrido el siguiente error en userfull_functions.ver_canal: \n\n{err.args}")
+            
+    if err_msg:
+        bot.send_message(call.message.chat.id, err_msg, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Entendido 👍", callback_data="volver_menu:del")]]))
     
     return indice
 
@@ -716,13 +777,15 @@ def ver_canal(call, bot, user, indice, cursor):
 def eliminar_canal(call, user , bot, cursor, indice, lista_seleccionada: list = []):
 
     # lista_seleccionada = ID de los canales seleccionados para eliminar
-    cursor.execute("SELECT ID FROM CANALES")
+    
     lote_publicaciones = cargar_variables()
     markup_canales=InlineKeyboardMarkup(row_width=1)
     conexion , cursor = cargar_conexion()
-    lista_fetch=cursor.fetchall()
     indice_inicial=indice
-    maximo = 8
+    maximo = 6
+    err_msg = comprobar_canales(bot, conexion, cursor)
+    cursor.execute("SELECT ID FROM CANALES")
+    lista_fetch=cursor.fetchall()
     
     
     try:
@@ -735,28 +798,18 @@ def eliminar_canal(call, user , bot, cursor, indice, lista_seleccionada: list = 
                 else:   
                     markup_canales.add(InlineKeyboardButton(bot.get_chat(lista_fetch[indice][0]).title, callback_data=f"eliminar_canal_select'{indice_inicial}:{indice}"))
                 
-                indice+=1
+                
                 
             except Exception as e:
                 if "list index out of range" in str(e.args):
                     break
                 
-                cursor.execute("SELECT NOMBRE FROM CANALES")
-                err=cursor.fetchall()[indice][0]
-                bot.send_message(call.message.chat.id, f"Ha ocurrido un error con el chat: <b>{err}</b>, procederé a eliminarlo\n\nDescripción del error:\n{e.args}")
-                cursor.execute(f"DELETE FROM CANALES WHERE NOMBRE='{err}'")
-                for publicacion in lote_publicaciones:
-                    if lista_fetch[indice][0] in lote_publicaciones[publicacion].canales:
-                        
-                        lote_publicaciones[publicacion].canales.remove(lista_fetch[indice][0])
+                else:
+                    raise Exception(str(e.args))
                 
-                
-                conexion.commit()
-                
-                cursor.execute("SELECT ID FROM CANALES")
-                lista_fetch=cursor.fetchall()
             
-                continue
+            indice+=1
+            
             
     except Exception as e:
         if indice > len(lista_fetch)-1:
@@ -785,12 +838,19 @@ def eliminar_canal(call, user , bot, cursor, indice, lista_seleccionada: list = 
     
     markup_canales.row(InlineKeyboardButton("✅ Listo (Eliminar)", callback_data="eliminar_canal_confirm"))
     markup_canales.row(InlineKeyboardButton("Menú | Volver ♻", callback_data="lista_canales_elegir"))
-
-    try:
-        enviar_mensajes(bot, call, "Selecciona el/los canal(es) a <b>ELIMINAR</b>", markup_canales)
+    if lista_fetch:
+        try:
+            enviar_mensajes(bot, call, "Selecciona el/los canal(es) a <b>ELIMINAR</b>", markup_canales)
+        
+        except:
+            bot.send_message(user, f"Ha ocurrido el siguiente error en userfull_functions.eliminar_canal: \n\n{e}")
     
-    except:
-        bot.send_message(user, f"Ha ocurrido el siguiente error en userfull_functions.eliminar_canal: \n\n{e}")
+    else:
+        enviar_mensajes(bot, call ,"¡No hay ningún canal en la Base de Datos!\nAgregue alguno en el botón de más abajo", markup=InlineKeyboardMarkup([[InlineKeyboardButton("➕Agregar chat➕", callback_data="anadir_canal")]]))
+                
+        
+    if err_msg:
+        bot.send_message(call.message.chat.id, err_msg, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Entendido 👍", callback_data="volver_menu:del")]]))
         
     return indice, lista_seleccionada
 
@@ -888,9 +948,11 @@ def change_channels(call, user , bot, indice, publicacion, tipo, operacion , lis
     global dict_temp
     indice_inicial=indice
     markup_canales=InlineKeyboardMarkup(row_width=1)
-    maximo = 4
+    maximo = 6
+    err_msg= comprobar_canales(bot, conexion, cursor, "❗Atención❗\nLos siguientes chats VINCULADOS a ESTA PUBLICACION han sido ELIMINADOS por algún error (la razón del error se especifica a la derecha del nombre del chat)\n\nASEGÚRATE de que ESTE BOT sea ADMINISTRADOR y tenga PERMISOS para enviar mensajes en dichos chats y vuelve a unirlos a aquí para recuperarlos:\n\n")
     conexion, cursor = cargar_conexion()
     lote_publicaciones = cargar_variables()
+    
     
 
     
@@ -920,21 +982,9 @@ def change_channels(call, user , bot, indice, publicacion, tipo, operacion , lis
                         break
                     
 
-                    err=publicacion.canales[indice]
-                    bot.send_message(call.message.chat.id, f"Ha ocurrido un error con el chat: <b>{err}</b>, procederé a eliminarlo\n\nDescripción del error:\n{e.args}")
-                    cursor.execute(f"DELETE FROM CANALES WHERE ID='{err}'")
-                    for publicacion in lote_publicaciones:
-                        if publicacion.canales[indice] in lote_publicaciones[publicacion].canales:
-                            
-                            lote_publicaciones[publicacion].canales.remove(publicacion.canales[indice])
+                    else:
+                        raise Exception(str(e.args))
                     
-                    
-                    conexion.commit()
-                    
-                    cursor.execute("SELECT ID FROM CANALES")
-                    lista_fetch=cursor.fetchall()
-                
-                    continue
                 
                 indice+=1
                 
@@ -972,6 +1022,7 @@ def change_channels(call, user , bot, indice, publicacion, tipo, operacion , lis
     
     elif tipo == "anadir" :
         
+        err_msg = comprobar_canales(bot, conexion, cursor)
         
         operacion = "ver_publicaciones/cc/anadir"
     
@@ -991,27 +1042,17 @@ def change_channels(call, user , bot, indice, publicacion, tipo, operacion , lis
                 else:
                     markup_canales.add(InlineKeyboardButton("✅ "+ bot.get_chat(dict_temp[user][indice][0]).title, callback_data=f"operacion_anadir/deselect'{indice_inicial}:{indice}&{publicacion.ID}"))
                     
-                indice +=1
+                
                 
             except Exception as e:
-                    if "list index out of range" in str(e.args):
-                        break
-                    
-                    err=dict_temp[user][indice][0]
-                    bot.send_message(call.message.chat.id, f"Ha ocurrido un error con el chat: <b>{err}</b>, procederé a eliminarlo\n\nDescripción del error:\n{e.args}")
-                    cursor.execute(f"DELETE FROM CANALES WHERE ID='{err}'")
-                    for publicacion in lote_publicaciones:
-                        if err in lote_publicaciones[publicacion].canales:
-                            
-                            lote_publicaciones[publicacion].canales.remove(err)
-                    
-                    
-                    conexion.commit()
-                    
-                    cursor.execute("SELECT ID FROM CANALES")
-                    lista_fetch=cursor.fetchall()
+                if "list index out of range" in str(e.args):
+                    break
                 
-                    continue
+                else:
+                    raise Exception(str(e.args))
+                    
+            
+            indice +=1
                 
         
         if len(dict_temp[user]) > maximo:
@@ -1037,8 +1078,14 @@ def change_channels(call, user , bot, indice, publicacion, tipo, operacion , lis
         
         
     try:
-        enviar_mensajes(bot, call, call.data, markup_canales)
-        # bot.edit_message_text(call.data, chat_id=user , message_id=call.message.message_id, reply_markup=markup_canales)
+        if dict_temp[user]:
+            enviar_mensajes(bot, call, call.data, markup_canales)
+            # bot.edit_message_text(call.data, chat_id=user , message_id=call.message.message_id, reply_markup=markup_canales)
+        
+        else:
+            enviar_mensajes(bot, call ,"¡No hay ningún canal en la Base de Datos!\nAgregue alguno en el botón de más abajo", markup=InlineKeyboardMarkup([[InlineKeyboardButton("➕Agregar chat➕", callback_data="anadir_canal")]]))
+        
+            
         
     except Exception as e:
 
@@ -1046,7 +1093,10 @@ def change_channels(call, user , bot, indice, publicacion, tipo, operacion , lis
             bot.send_message(user, call.data , reply_markup=markup_canales)
         except:
             bot.send_message(user, f"Ha ocurrido el siguiente error en userfull_functions.change_channels: \n\n{e}")
-                
+            
+    if err_msg:
+        bot.send_message(call.message.chat.id, err_msg, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Entendido 👍", callback_data="volver_menu:del")]]))
+        
     return indice , lista_seleccionada , operacion
 
 
@@ -1055,12 +1105,17 @@ def change_channels(call, user , bot, indice, publicacion, tipo, operacion , lis
 def agregar_canal_publicacion(bot, call, indice, lista_seleccionada, cursor):
 
         markup_canales=InlineKeyboardMarkup(row_width=1)
-        cursor.execute("SELECT ID FROM CANALES")
+        
         conexion, cursor = cargar_conexion()
         lote_publicaciones = cargar_variables()
         indice_inicial=indice
-        dict_temp[call.from_user.id] = cursor.fetchall()
+        
+        err_msg = comprobar_canales(bot, conexion, cursor)
         maximo=4
+        
+        cursor.execute("SELECT ID FROM CANALES")
+        dict_temp[call.from_user.id] = cursor.fetchall()
+        
         
         try:
             
@@ -1074,29 +1129,18 @@ def agregar_canal_publicacion(bot, call, indice, lista_seleccionada, cursor):
                         #select
                         markup_canales.add(InlineKeyboardButton(bot.get_chat(dict_temp[call.from_user.id][indice][0]).title, callback_data=f"publicacion/c/select'{indice_inicial}:{indice}"))
                         
-                    indice+=1
                         
                 except Exception as e:
                     if "list index out of range" in str(e.args):
                         break
                     
 
-                    err=publicacion.canales[indice]
-                    bot.send_message(call.message.chat.id, f"Ha ocurrido un error con el chat: <b>{err}</b>, procederé a eliminarlo\n\nDescripción del error:\n{e.args}")
-                    cursor.execute(f"DELETE FROM CANALES WHERE ID='{err}'")
-                    for publicacion in lote_publicaciones:
-                        if err in lote_publicaciones[publicacion].canales:
-                            
-                            lote_publicaciones[publicacion].canales.remove(ImportError)
-                    
-                    
-                    conexion.commit()
-                    
-                    cursor.execute("SELECT ID FROM CANALES")
-                    lista_fetch=cursor.fetchall()
+                    else:
+                        raise Exception(str(e.args))
+                               
+                indice +=1
                 
-                    continue
-                    
+                
                 
                 
         except Exception as e:
@@ -1105,6 +1149,8 @@ def agregar_canal_publicacion(bot, call, indice, lista_seleccionada, cursor):
             
             else:
                 bot.send_message(call.message.chat.id, f"Ha ocurrido un error al intentar mostrar la lista de canales en el archivo usefull_functions.change_channels('agregar_publicacion')\n\nDescripción:\n{e}")
+                return
+        
         
         if len(dict_temp[call.from_user.id]) >= maximo:
             if indice_inicial % maximo != 0:
@@ -1130,11 +1176,20 @@ def agregar_canal_publicacion(bot, call, indice, lista_seleccionada, cursor):
         markup_canales.row(InlineKeyboardButton("✅ Listo (Agregar)", callback_data=f"publicacion/c/confirm"))
         markup_canales.row(InlineKeyboardButton("Cancelar Operación ❌", callback_data="publicacion/c/cancel"))
         
-        if call.message.text and "Selecciona el/los canal(es) a incluir en la Publicación" in call.message.text:
-            enviar_mensajes(bot, call, "Selecciona el/los canal(es) a incluir en la Publicación.\nEstos serán a donde irá la Publicación una vez iniciado el hilo de publicaciones\n\nPara deseleccionar presiona en el canal que seleccionaste marcado con ✅" , markup_canales)
+        
+        if not dict_temp[call.from_user.id]:
+            enviar_mensajes(bot, call ,"¡No hay ningún canal en la Base de Datos!\nAgregue alguno en el botón de más abajo", markup=InlineKeyboardMarkup([[InlineKeyboardButton("➕Agregar chat➕", callback_data="anadir_canal")]]))
+            
             
         else:
-            bot.send_message(call.message.chat.id, "Selecciona el/los canal(es) a incluir en la Publicación.\nEstos serán a donde irá la Publicación una vez iniciado el hilo de publicaciones\n\nPara deseleccionar presiona en el canal que seleccionaste marcado con ✅", reply_markup = markup_canales)
+            if call.message.text and "Selecciona el/los canal(es) a incluir en la Publicación" in call.message.text:
+                enviar_mensajes(bot, call, "Selecciona el/los canal(es) a incluir en la Publicación.\nEstos serán a donde irá la Publicación una vez iniciado el hilo de publicaciones\n\nPara deseleccionar presiona en el canal que seleccionaste marcado con ✅" , markup_canales)
+                
+            else:
+                bot.send_message(call.message.chat.id, "Selecciona el/los canal(es) a incluir en la Publicación.\nEstos serán a donde irá la Publicación una vez iniciado el hilo de publicaciones\n\nPara deseleccionar presiona en el canal que seleccionaste marcado con ✅", reply_markup = markup_canales)
+            
+        if err_msg:
+            bot.send_message(call.message.chat.id, err_msg, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Entendido 👍", callback_data="volver_menu:del")]]))
         
         return
     
