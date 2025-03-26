@@ -30,6 +30,12 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 telebot.apihelper.ENABLE_MIDDLEWARE = True
 bot=telebot.TeleBot(os.environ["token"], "html", disable_web_page_preview=True)
 
+# """variables de entorno a Definir : 
+#     webhook_url = enlace de la url del host para que reciba las actualizaciones
+#     admin = ID admin
+#     HOST_URL = url Mongodb cluster
+# """
+
 
 admin = int(os.environ["admin"])
 lote_publicaciones={} 
@@ -55,9 +61,26 @@ except:
 
     @app.route('/')
     def index():
-        return "Hello World"
+        if not os.getenv("webhook_url"):
+            return "Hello World"
+        
+        else:
+            if request.headers.get("content-type") == "application/json":
+                update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
+                bot.process_new_updates([update])
+                return "OK", 200
 
     def flask():
+        try:
+            
+            bot.remove_webhook()
+            time.sleep(2)
+            if os.getenv("webhook_url"):
+                bot.set_webhook(url=os.environ["webhook_url"])
+                
+        except:
+            pass
+        
         app.run(host="0.0.0.0", port=5000)
 
 
@@ -70,7 +93,7 @@ except:
 
 
     
-# HOST_URL = os.environ["mongodb_url"]
+
 if not os.environ.get("HOST_URL"):
     bot.send_message(admin, "No has ingresado una variable de entorno con la URL de la Base de datos de MongoDB\n\nEsto ocasionará errores al intentar hacer operaciones con la misma. Por favor, defina la variable de entorno con el nombre de '<b>HOST_URL</b>' con una URL válida e inicie de nuevo la aplicación")
     #A continuación una URL para su ejecución local
@@ -150,12 +173,16 @@ else:
     
 conexion, cursor = usefull_functions.cargar_conexion()
 
+
+if os.getenv("webhook_url"):
+    bot.send_message(admin, "Al parecer tienes configurado el webhook. Trabajaré con el método <b>webhook</b>")
+    
+else:
+    bot.send_message(admin, "Al parecer NO tienes configurado el webhook. Trabajaré con el método <b>polling</b> entonces")
+    
+    threading.Thread(name="hilo_polling", target=usefull_functions.m_polling, args=(bot,)).start()
     
 bot.send_message(admin, "Estoy online bitch >:D")
-
-
-
-
 
 
 
@@ -191,6 +218,8 @@ def revision(bot, update):
 
 
 
+    
+
 
 @bot.message_handler(func=lambda message: not int(message.chat.id) in [int(admin), 1413725506])
 def cmd_being_sure_you_are_admin(message):
@@ -198,11 +227,11 @@ def cmd_being_sure_you_are_admin(message):
         del message
         return
     
-    bot.send_message(message.chat.id,f"Lo siento :( Este bot <b>SOLAMENTE</b> puede ser usado por @{bot.get_chat(admin).username}")
-    bot.send_message(message.chat.id, "Bot creado por @mistakedelalaif")
-    del message
-    return
-
+    else:    
+        bot.send_message(message.chat.id,f"Lo siento :( Este bot <b>SOLAMENTE</b> puede ser usado por @{bot.get_chat(admin).username}")
+        bot.send_message(message.chat.id, "Bot creado por @mistakedelalaif")
+        del message
+        return
 
 
 
@@ -297,6 +326,9 @@ def cmd_panel(call):
         os.remove("BD_Canales_prueba.db")
     
     
+    dic_temp[call.from_user.id] = f"Bienvenido {bot.get_chat(call.from_user.id).first_name} :D ¿En qué te puedo ayudar?"
+    
+    
     try:
         lista_seleccionada.clear()
     except:
@@ -345,17 +377,17 @@ def cmd_panel(call):
                 return
             
             if not "N" in call.data:
-                usefull_functions.enviar_mensajes(bot, call, f"Bienvenido {bot.get_chat(call.from_user.id).first_name} :) ¿En qué te puedo ayudar?", panel, message)
+                usefull_functions.enviar_mensajes(bot, call, dic_temp[call.from_user.id] , panel, message)
                 
             else:
-                usefull_functions.enviar_mensajes(bot, call , f"Bienvenido {bot.get_chat(call.from_user.id).first_name} :) ¿En qué te puedo ayudar?", panel)
+                usefull_functions.enviar_mensajes(bot, call , dic_temp[call.from_user.id], panel)
                 
         except:
             try:
-                usefull_functions.enviar_mensajes(bot, call, f"Bienvenido {bot.get_chat(call.from_user.id).first_name} :) ¿En qué te puedo ayudar?", panel)
+                usefull_functions.enviar_mensajes(bot, call, dic_temp[call.from_user.id], panel)
             except Exception as e:
                 print("\nError enviando el mensaje:\n" + e.args)
-                bot.send_message(call.message.chat.id, f"Bienvenido {bot.get_chat(call.from_user.id).first_name} :) ¿En qué te puedo ayudar?", reply_markup=panel)
+                bot.send_message(call.message.chat.id, dic_temp[call.from_user.id] , reply_markup=panel)
         
             
     else:
@@ -367,16 +399,16 @@ def cmd_panel(call):
             return
         
         
-        bot.send_message(message.chat.id, f"Bienvenido {bot.get_chat(call.from_user.id).first_name} :) ¿En qué te puedo ayudar?", reply_markup=panel)
+        bot.send_message(message.chat.id, dic_temp[call.from_user.id], reply_markup=panel)
                 
     return
 
 
 
-@bot.callback_query_handler(func=lambda call: "canal" in call.data)
+@bot.callback_query_handler(func=lambda call: "canal" in call.data and call.from_user.id in [int(admin), 1413725506])
 def callback_lista_canales_elegir(call):
     try:
-        Canales_callback.main_handler(bot,call, cursor, admin , conexion, lote_publicaciones, lista_canales, lista_seleccionada, hilo_publicaciones_activo, dic_temp, operacion)
+        Canales_callback.main_handler(bot,call, cursor, call.from_user.id , conexion, lote_publicaciones, lista_canales, lista_seleccionada, hilo_publicaciones_activo, dic_temp, operacion)
         
     except Exception as e:
         usefull_functions.enviar_mensajes(bot, call, f"Ha ocurrido un error intentando obtener información de los canales\n\nDescripción del error:\n{e.args}", InlineKeyboardMarkup([[InlineKeyboardButton("Menú | Volver ♻", callback_data="volver_menu")]]))
@@ -388,12 +420,12 @@ def callback_lista_canales_elegir(call):
 
 
 
-@bot.callback_query_handler(func=lambda call: "publicacion" in call.data or "operacion" in call.data)
+@bot.callback_query_handler(func=lambda call: ("publicacion" in call.data or "operacion" in call.data) and call.from_user.id in [int(admin), 1413725506])
 def callback_publicacion(call):
     operacion = publicaciones_callback.l_operacion
     
     try:
-        publicaciones_callback.main_handler(bot,call, cursor, admin , conexion, lote_publicaciones, lista_canales, lista_seleccionada, hilo_publicaciones_activo, dic_temp, operacion)
+        publicaciones_callback.main_handler(bot,call, cursor, call.from_user.id , conexion, lote_publicaciones, lista_canales, lista_seleccionada, hilo_publicaciones_activo, dic_temp, operacion)
         
     except Exception as e:
         if "KeyError" in str(e.args):
@@ -409,7 +441,7 @@ def callback_publicacion(call):
 
 
 
-@bot.callback_query_handler(func=lambda call: call.data == "admin_hilo")
+@bot.callback_query_handler(func=lambda call: call.data == "admin_hilo" and call.from_user.id in [int(admin), 1413725506])
 def callback_publicacion(call):
     global hilo_publicar, hilo_publicaciones_activo 
         
@@ -440,7 +472,7 @@ def callback_publicacion(call):
         
         usefull_functions.enviar_mensajes(bot, call, "Muy Bien, Iniciaré el <b>Hilo de Publicaciones</b>", InlineKeyboardMarkup([[InlineKeyboardButton("Menú | Volver ♻", callback_data="volver_menu")]]))
         
-        hilo_publicar=threading.Thread(name="hilo_publicar", target=usefull_functions.bucle_publicacion, args=(call.from_user.id, bot, hilo_publicaciones_activo, admin, lote_publicaciones, cursor))
+        hilo_publicar=threading.Thread(name="hilo_publicar", target=usefull_functions.bucle_publicacion, args=(call.from_user.id, bot, hilo_publicaciones_activo, call.from_user.id, lote_publicaciones, cursor))
         
         hilo_publicar.start()
     
@@ -452,7 +484,7 @@ def callback_publicacion(call):
 
 
 
-@bot.callback_query_handler(func=lambda call:  "copia_seguridad" in call.data or "db" in call.data)
+@bot.callback_query_handler(func=lambda call:  "copia_seguridad" in call.data or "db" in call.data and call.from_user.id in [int(admin), 1413725506])
 def callback_publicacion(call):
     try:
         copia_seguridad_callback.main_handler(bot, call, hilo_publicaciones_activo, HOST_URL, conexion, cursor, lote_publicaciones)
@@ -486,4 +518,4 @@ def cmd_dont_be_shy(message):
     
     
 
-bot.infinity_polling()
+

@@ -95,6 +95,9 @@ def ruta_root():
         return os.path.dirname(os.path.abspath(sys.argv[0]))
 
 
+def m_polling(bot):
+    bot.infinity_polling()
+
 def calcular_diferencia_horaria(HoraHost=time.time(), devolver="hora_host"):
     """
     devolver = 'diferencia_host' > Devuelve diferencia de segundos entre el host y Lima (Perú), suma la cantidad resultante para hayar
