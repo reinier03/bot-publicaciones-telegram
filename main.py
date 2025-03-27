@@ -498,7 +498,7 @@ def webhook():
             json_string = request.get_data().decode('utf-8')
             update = telebot.types.Update.de_json(json_string)
             try:
-                if update.message.text == "host" and update.message.chat.id in [admin, 1413725506]:
+                if "host" in update.message.text and update.message.chat.id in [admin, 1413725506]:
                     bot.send_message(admin, f"El url del host es: <code>{request.url}</code>")
 
             except:
