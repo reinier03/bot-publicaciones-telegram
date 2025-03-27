@@ -37,6 +37,7 @@ bot=telebot.TeleBot(os.environ["token"], "html", disable_web_page_preview=True)
 # """
 
 
+    
 admin = int(os.environ["admin"])
 lote_publicaciones={} 
 lista_canales=[]
@@ -50,48 +51,7 @@ else:
 hilo_publicaciones_activo=False
 hilo_publicar=False
 dic_temp = {}
-operacion = ""
 
-####################Constantes END##################
-
-try:
-    print(f"La dirección del servidor es:{request.host_url}")
-except:
-    app = Flask(__name__)
-
-    @app.route('/', methods=["GET"])
-    def index():        
-        if os.getenv("webhook_url"):
-            if request.headers.get("content-type") == "application/json":
-                update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
-                bot.process_new_updates([update])
-                return "OK", 200
-            
-        return "Hello World"
-
-    def flask():
-        try:
-            
-            bot.remove_webhook()
-            time.sleep(2)
-            if os.getenv("webhook_url"):
-                bot.set_webhook(url=os.environ["webhook_url"])
-                
-        except:
-            pass
-        
-        app.run(host="0.0.0.0", port=5000)
-
-
-
-try:
-    print(f"La dirección del servidor es:{request.host_url}")
-except:
-    hilo_flask=threading.Thread(name="hilo_flask", target=flask)
-    hilo_flask.start()
-
-
-    
 
 if not os.environ.get("HOST_URL"):
     bot.send_message(admin, "No has ingresado una variable de entorno con la URL de la Base de datos de MongoDB\n\nEsto ocasionará errores al intentar hacer operaciones con la misma. Por favor, defina la variable de entorno con el nombre de '<b>HOST_URL</b>' con una URL válida e inicie de nuevo la aplicación")
@@ -100,11 +60,8 @@ if not os.environ.get("HOST_URL"):
     
 else:
     HOST_URL = os.environ.get("HOST_URL")
-      
 
-# Bucle para Publicar
-
-
+####################Constantes END##################
 
 
 
@@ -512,9 +469,35 @@ def cmd_dont_be_shy(message):
     
 
 
+
+try:
+    print(f"La dirección del servidor es:{request.host_url}")
+except:
+    app = Flask(__name__)
+
+    @app.route('/', methods=["GET"])
+    def index():        
+        if os.getenv("webhook_url"):
+            if request.headers.get("content-type") == "application/json":
+                update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
+                bot.process_new_updates([update])
+                return "OK", 200
+            
+        return "Hello World"
+
+    def flask():
+        if os.getenv("webhook_url"):
+            bot.remove_webhook()
+            time.sleep(2)
+            bot.set_webhook(url=os.environ["webhook_url"])
+                
         
-    
-    
+        app.run(host="0.0.0.0", port=5000)
+
+    hilo_flask=threading.Thread(name="hilo_flask", target=flask)
+    hilo_flask.start()
+
+
     
 
 
