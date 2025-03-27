@@ -482,9 +482,12 @@ def webhook():
     global dic_temp
     
     if request.method.lower() == "post":
-        if dic_temp[admin] == "host":
-            bot.send_message(f"El url del host es: <code>{request.url}</code>")
-            del dic_temp[admin]
+        try:
+            if dic_temp[admin] == "host":
+                bot.send_message(f"El url del host es: <code>{request.url}</code>")
+                del dic_temp[admin]
+        except:
+            pass
             
         if request.headers.get('content-type') == 'application/json':
             json_string = request.get_data().decode('utf-8')
