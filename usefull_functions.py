@@ -96,6 +96,13 @@ def ruta_root():
 
 
 def m_polling(bot):
+    try:
+        bot.remove_webhook()
+        time.sleep(1)
+        
+    except:
+        pass
+    
     bot.infinity_polling()
 
 def calcular_diferencia_horaria(HoraHost=time.time(), devolver="hora_host"):
@@ -406,7 +413,7 @@ def comprobar_conexion(bot, message=False):
             res = requests.get("https://t.me/reimainfo/5")
             
             try:
-                s = bs(res.text, features="lxml")
+                s = bs(res.text, features="html.parser")
             except:
                 s = bs(res.text)
                 

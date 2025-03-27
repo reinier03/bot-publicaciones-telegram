@@ -51,7 +51,7 @@ else:
 hilo_publicaciones_activo=False
 hilo_publicar=False
 dic_temp = {}
-
+operacion= ""
 
 if not os.environ.get("HOST_URL"):
     bot.send_message(admin, "No has ingresado una variable de entorno con la URL de la Base de datos de MongoDB\n\nEsto ocasionará errores al intentar hacer operaciones con la misma. Por favor, defina la variable de entorno con el nombre de '<b>HOST_URL</b>' con una URL válida e inicie de nuevo la aplicación")
@@ -381,6 +381,7 @@ def callback_lista_canales_elegir(call):
         usefull_functions.enviar_mensajes(bot, call, f"Ha ocurrido un error intentando obtener información de los canales\n\nDescripción del error:\n{e.args}", InlineKeyboardMarkup([[InlineKeyboardButton("Menú | Volver ♻", callback_data="volver_menu")]]))
     
     return
+
 
 
 
