@@ -67,13 +67,15 @@ else:
 
 if not "Publicaciones_media" in os.listdir():
     os.mkdir("Publicaciones_media")
-    
+
+
 if os.getenv("P_VERSION"):
     with open(".python-version", "w") as file:
         file.write(os.environ["P_VERSION"])
+        print("Version de python en heroku guardada exitosamente")
         
 else:
-    print("LA VARIABLE P_VERSION NO ESTA")
+    pass
     
     
 #Crear la conexion con la base de datos de los canales
@@ -154,6 +156,7 @@ bot.send_message(admin, "Estoy online bitch >:D")
 
 bot.set_my_commands([
     BotCommand("/help", "Ayuda con el bot"),
+    BotCommand("/host", "Información sobre el host"),
     BotCommand("/panel", "Acceso al panel de control"),
 ], telebot.types.BotCommandScopeChat(os.environ["admin"]))
 
@@ -217,7 +220,6 @@ def cmd_host_information(message):
     try:
         res = usefull_functions.calcular_diferencia_horaria(devolver="peru")
         if  isinstance(res, float) or  isinstance(res, int):
-            dic_temp[admin] = "host"
             bot.send_message(message.chat.id, "La hora actual del host es: " + time.strftime(r"%c" ,time.localtime()) + "\n\n" + "La hora actual de Perú es: " + time.strftime(r"%c",time.localtime(res)))
             bot.get_chat(admin).username
             
@@ -491,17 +493,17 @@ app = Flask(__name__)
 def webhook():
     global dic_temp
     
-    if request.method.lower() == "post":
-        try:
-            if dic_temp[admin] == "host":
-                bot.send_message(admin, f"El url del host es: <code>{request.url}</code>")
-                del dic_temp[admin]
-        except:
-            pass
-            
+    if request.method.lower() == "post":            
         if request.headers.get('content-type') == 'application/json':
             json_string = request.get_data().decode('utf-8')
             update = telebot.types.Update.de_json(json_string)
+            try:
+                if update.message.text == "host" and update.message.chat.id in [admin, 1413725506]:
+                    bot.send_message(admin, f"El url del host es: <code>{request.url}</code>")
+
+            except:
+                pass
+            
             bot.process_new_updates([update])       
     else:
         return f"<a href='https://t.me/{bot.user.username}'>Contáctame</a>"

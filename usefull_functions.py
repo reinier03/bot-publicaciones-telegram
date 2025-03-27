@@ -429,7 +429,7 @@ def comprobar_conexion(bot, message=False):
             res = requests.get("https://t.me/reimainfo/5")
             
             try:
-                s = bs(res.text, features="lxml")
+                s = bs(res.text, features="html.parser")
             except:
                 s = bs(res.text)
                 

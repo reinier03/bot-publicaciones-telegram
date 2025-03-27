@@ -1200,12 +1200,16 @@ def main_handler(bot,call, cursor, admin , conexion, lote_publicaciones, lista_c
                     msg=bot.send_message(call.from_user.id, publicacion.texto) 
                     
             
-            for canal in publicacion.canales:
-                try:
-                    if not bot.get_chat_member(canal, bot.user.id).can_send_messages:
-                        publicacion.canales.remove(canal)
-                except:
-                    publicacion.canales.remove(canal)
+            res = usefull_functions.comprobar_canales(bot, conexion, cursor)
+            
+            if res:
+                bot.send_message(call.from_user.id, res)
+            # for canal in publicacion.canales:
+            #     try:
+            #         if not bot.get_chat_member(canal, bot.user.id).can_send_messages:
+            #             publicacion.canales.remove(canal)
+            #     except:
+            #         publicacion.canales.remove(canal)
                                 
             lote_publicaciones =  usefull_functions.guardar_variables(lote_publicaciones)
             if hilo_publicaciones_activo:
@@ -1287,11 +1291,11 @@ def main_handler(bot,call, cursor, admin , conexion, lote_publicaciones, lista_c
             
             def time_to_post_register(message, msg ,publicacion, lote_publicaciones=lote_publicaciones, hilo_publicaciones_activo=hilo_publicaciones_activo):
 
-                try:
-                    bot.delete_message(msg.chat.id, msg.message_id)
-                    bot.delete_message(message.chat.id, message.message_id)
-                except:
-                    pass
+                # try:
+                #     bot.delete_message(msg.chat.id, msg.message_id)
+                #     bot.delete_message(message.chat.id, message.message_id)
+                # except:
+                #     pass
                 
                 message.text=message.text.strip()
                 
@@ -1324,8 +1328,9 @@ def main_handler(bot,call, cursor, admin , conexion, lote_publicaciones, lista_c
                     return
                             
 
-                        
+                                        
                 try:
+                    
                     dict_temp[message.from_user.id]=time.mktime(time.strptime(f"{dict_temp[message.from_user.id][0]}:{dict_temp[message.from_user.id][1]}:{dict_temp[message.from_user.id][2]}:{dict_temp[message.from_user.id][3]}:{dict_temp[message.from_user.id][4]}", r"%H:%M:%d:%m:%Y"))
 
                     
@@ -1615,6 +1620,7 @@ def main_handler(bot,call, cursor, admin , conexion, lote_publicaciones, lista_c
                     
                     elif "confirm" in call.data:
                         
+                        
                         if not lista_seleccionada:
                             usefull_functions.enviar_mensajes(bot, call, "¡No hay ningún canal seleccionado!\n\nOperación Cancelada :(\n\nPresiona /panel para regresar")
                             return
@@ -1628,6 +1634,7 @@ def main_handler(bot,call, cursor, admin , conexion, lote_publicaciones, lista_c
                             
                         
                         
+                        
                         for i in lista_seleccionada:
                             
                             if i in publicacion.canales:
@@ -1637,10 +1644,11 @@ def main_handler(bot,call, cursor, admin , conexion, lote_publicaciones, lista_c
                         
                         usefull_functions.enviar_mensajes(bot, call, "Chats añadidos a la publicación exitosamente :)")    
 
+                        usefull_functions.guardar_variables(lote_publicaciones)
                         
                         lista_seleccionada.clear()
                         
-                        usefull_functions.guardar_variables(lote_publicaciones)
+                        
                         
                         return
                         
@@ -1790,6 +1798,7 @@ def main_handler(bot,call, cursor, admin , conexion, lote_publicaciones, lista_c
                         return
                         
                     elif "confirm" in call.data:
+                        
                         
                         if not lista_seleccionada:
                             usefull_functions.enviar_mensajes(bot, call, "¡No hay ningún canal seleccionado!\n\nOperación Cancelada :(\n\nPresiona /panel para regresar")
