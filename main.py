@@ -484,7 +484,7 @@ def webhook():
     if request.method.lower() == "post":
         try:
             if dic_temp[admin] == "host":
-                bot.send_message(f"El url del host es: <code>{request.url}</code>")
+                bot.send_message(admin, f"El url del host es: <code>{request.url}</code>")
                 del dic_temp[admin]
         except:
             pass
