@@ -68,6 +68,11 @@ else:
 if not "Publicaciones_media" in os.listdir():
     os.mkdir("Publicaciones_media")
     
+if os.getenv("PYTHON_VERSION"):
+    with open(".python-version", "w") as file:
+        file.write(os.environ["PYTHON_VERSION"])
+    
+    
 #Crear la conexion con la base de datos de los canales
 conexion, cursor = usefull_functions.cargar_conexion(bot)
 
@@ -211,6 +216,7 @@ def cmd_host_information(message):
         if  isinstance(res, float) or  isinstance(res, int):
             dic_temp[admin] = "host"
             bot.send_message(message.chat.id, "La hora actual del host es: " + time.strftime(r"%c" ,time.localtime()) + "\n\n" + "La hora actual de Perú es: " + time.strftime(r"%c",time.localtime(res)))
+            bot.get_chat(admin).username
             
         else:
             
