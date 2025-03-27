@@ -478,8 +478,10 @@ app = Flask(__name__)
 @app.route('/', methods=["GET", "POST"])
 def index():        
     if request.method.lower() == "post":
-        print(vars(request))
-        return
+        for i in vars(request):
+            print(i)
+            
+        return 200, "OK"
     
     print("Llegó la solicitud")
     if os.getenv("webhook_url"):
