@@ -204,10 +204,12 @@ def cmd_start(message):
     
 @bot.message_handler(commands=["host"])
 def cmd_host_information(message):
+    global dic_temp
+    
     try:
         res = usefull_functions.calcular_diferencia_horaria(devolver="peru")
         if  isinstance(res, float) or  isinstance(res, int):
-        
+            dic_temp[admin] = "host"
             bot.send_message(message.chat.id, "La hora actual del host es: " + time.strftime(r"%c" ,time.localtime()) + "\n\n" + "La hora actual de Perú es: " + time.strftime(r"%c",time.localtime(res)))
             
         else:
@@ -477,7 +479,13 @@ app = Flask(__name__)
 
 @app.route("/", methods=['POST', 'GET'])
 def webhook():
+    global dic_temp
+    
     if request.method.lower() == "post":
+        if dic_temp[admin] == "host":
+            bot.send_message(f"El url del host es: <code>{request.url}</code>")
+            del dic_temp[admin]
+            
         if request.headers.get('content-type') == 'application/json':
             json_string = request.get_data().decode('utf-8')
             update = telebot.types.Update.de_json(json_string)
@@ -492,7 +500,6 @@ def flask():
         bot.remove_webhook()
         time.sleep(2)
         bot.set_webhook(url=os.environ["webhook_url"])
-            
     
     app.run(host="0.0.0.0", port=5000)
 
