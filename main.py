@@ -475,14 +475,17 @@ def cmd_dont_be_shy(message):
 
 app = Flask(__name__)
 
-@app.route("/", methods=['POST'])
+@app.route("/", methods=['POST', 'GET'])
 def webhook():
-    if request.headers.get('content-type') == 'application/json':
-        json_string = request.get_data().decode('utf-8')
-        update = telebot.types.Update.de_json(json_string)
-        bot.process_new_updates([update])       
+    if request.method.lower() == "post":
+        if request.headers.get('content-type') == 'application/json':
+            json_string = request.get_data().decode('utf-8')
+            update = telebot.types.Update.de_json(json_string)
+            bot.process_new_updates([update])       
+    else:
+        return f"<a href='https://t.me/{bot.user.username}'>Contáctame</a>"
         
-    return "Hello World"
+    return f"<a href='https://t.me/{bot.user.username}'>Contáctame</a>"
 
 def flask():
     if os.getenv("webhook_url"):
