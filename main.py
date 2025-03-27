@@ -481,7 +481,7 @@ def index():
         for i in vars(request):
             print(i)
             
-        return 200, "OK"
+        return "OK"
     
     print("Llegó la solicitud")
     if os.getenv("webhook_url"):
