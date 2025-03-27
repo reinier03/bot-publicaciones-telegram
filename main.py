@@ -470,34 +470,39 @@ def cmd_dont_be_shy(message):
 
 
 
+
+
+
+app = Flask(__name__)
+
+@app.route('/', methods=["GET"])
+def index():        
+    if os.getenv("webhook_url"):
+        if request.headers.get("content-type") == "application/json":
+            update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
+            bot.process_new_updates([update])
+            return "OK", 200
+        
+    return "Hello World"
+
+def flask():
+    if os.getenv("webhook_url"):
+        bot.remove_webhook()
+        time.sleep(2)
+        bot.set_webhook(url=os.environ["webhook_url"])
+            
+    
+    app.run(host="0.0.0.0", port=5000)
+
+
 try:
     print(f"La dirección del servidor es:{request.host_url}")
+    
 except:
-    app = Flask(__name__)
-
-    @app.route('/', methods=["GET"])
-    def index():        
-        if os.getenv("webhook_url"):
-            if request.headers.get("content-type") == "application/json":
-                update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
-                bot.process_new_updates([update])
-                return "OK", 200
-            
-        return "Hello World"
-
-    def flask():
-        if os.getenv("webhook_url"):
-            bot.remove_webhook()
-            time.sleep(2)
-            bot.set_webhook(url=os.environ["webhook_url"])
-                
-        
-        app.run(host="0.0.0.0", port=5000)
-
     hilo_flask=threading.Thread(name="hilo_flask", target=flask)
     hilo_flask.start()
 
 
-    
+
 
 
