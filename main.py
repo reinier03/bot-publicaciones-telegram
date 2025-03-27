@@ -225,8 +225,10 @@ def cmd_host_information(message):
         if  isinstance(res, float) or  isinstance(res, int):
             if not os.getenv("webhook_url"):
                 dic_temp[message.from_user.id] = "No tengo ahora mismo una forma concreta de obtener la URL del host, de todas formas he obtenido algunas variables de entorno que pueden contener dicha dirección, por favor compruebalas para verificar:\n\n(nombre_variable = valor)\n"
-                for e, key, value in enumerate(os.environ.items(), start=0):
+                contador = 0
+                for key, value in os.environ.items():
                     if key in ["host", "url"]:
+                        contador += 1
                         dic_temp[message.from_user.id] += f"{e + 1}=>  {key} = <code>{value}</code>\n\n"
                         
                 if re.search(r"\d+", dic_temp[message.from_user.id]):
