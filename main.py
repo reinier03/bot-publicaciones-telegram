@@ -68,9 +68,12 @@ else:
 if not "Publicaciones_media" in os.listdir():
     os.mkdir("Publicaciones_media")
     
-if os.getenv("PYTHON_VERSION"):
+if os.getenv("P_VERSION"):
     with open(".python-version", "w") as file:
-        file.write(os.environ["PYTHON_VERSION"])
+        file.write(os.environ["P_VERSION"])
+        
+else:
+    print("LA VARIABLE P_VERSION NO ESTA")
     
     
 #Crear la conexion con la base de datos de los canales
