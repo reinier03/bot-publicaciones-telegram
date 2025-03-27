@@ -31,9 +31,11 @@ telebot.apihelper.ENABLE_MIDDLEWARE = True
 bot=telebot.TeleBot(os.environ["token"], "html", disable_web_page_preview=True)
 
 # """variables de entorno a Definir : 
-#     webhook_url = enlace de la url del host para que reciba las actualizaciones
-#     admin = ID admin
-#     HOST_URL = url Mongodb cluster
+#     webhook_url = Enlace PUBLICO de la url del host para que reciba las actualizaciones, si se especifica esta variable se usará el método webhook, si no se especifica se usará el método polling (Parámetro Opcional)
+#     admin = ID admin (*Obligatorio)
+#     HOST_URL = url Mongodb cluster (Parámetro Opcional, si quieres usar MongoDB es obligatorio)
+#     token = token del bot (**OBLIGATORIO)
+#     P_VERSION = Especifica EN HEROKU la version de Python que deseas usar (No lo he probado en heroku, no garantizo su funcionalidad) (Opcional)
 # """
 
 
@@ -217,9 +219,19 @@ def cmd_start(message):
 def cmd_host_information(message):
     global dic_temp
     
+    
     try:
         res = usefull_functions.calcular_diferencia_horaria(devolver="peru")
         if  isinstance(res, float) or  isinstance(res, int):
+            if not os.getenv("webhook_url"):
+                dic_temp[message.from_user.id] = "No tengo ahora mismo una forma concreta de obtener la URL del host, de todas formas he obtenido algunas variables de entorno que pueden contener dicha dirección, por favor compruebalas para verificar:\n\n(nombre_variable = valor)\n"
+                for e, key, value in enumerate(os.environ.items(), start=0):
+                    if key in ["host", "url"]:
+                        dic_temp[message.from_user.id] += f"{e + 1}=>  {key} = <code>{value}</code>\n\n"
+                        
+                if re.search(r"\d+", dic_temp[message.from_user.id]):
+                    bot.send_message(message.chat.id, dic_temp[message.from_user.id])
+                    
             bot.send_message(message.chat.id, "La hora actual del host es: " + time.strftime(r"%c" ,time.localtime()) + "\n\n" + "La hora actual de Perú es: " + time.strftime(r"%c",time.localtime(res)))
             bot.get_chat(admin).username
             
