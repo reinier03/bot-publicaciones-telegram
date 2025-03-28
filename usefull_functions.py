@@ -43,6 +43,9 @@ def comprobar_canales(bot, conexion, cursor ,err_msg="❗Atención❗\nLos sigui
                 
         cursor.execute(f"DELETE FROM CANALES WHERE ID='{chat}'")
         conexion.commit()
+        
+        lote_publicaciones = guardar_variables(lote_publicaciones)
+        return
     
     for i in lista_fetch:
         try:  
@@ -127,10 +130,10 @@ def calcular_diferencia_horaria(HoraHost=time.time(), devolver="hora_host"):
     
     try:
         
-        lima = json.loads(requests.get("http://api.timezonedb.com/v2.1/get-time-zone", params={"key": "68TYQMUQ25P6", "by": "zone", "format": "json" , "zone" : "America/Lima"}).content)["timestamp"] + tiempo_diferencia
+        lima = time.gmtime(json.loads(requests.get("http://api.timezonedb.com/v2.1/get-time-zone", params={"key": "68TYQMUQ25P6", "by": "zone", "format": "json" , "zone" : "America/Lima"}).content)["timestamp"])
+        lima = time.mktime(time.strptime(f"{lima.tm_mday}/{lima.tm_mon}/{lima.tm_year} {lima.tm_hour}:{lima.tm_min}:{lima.tm_sec}", "%d/%m/%Y %H:%M:%S"))
     except Exception as e:
         return ("ERROR", e.args)
-    
     
     
     devolver = devolver.lower()
@@ -617,7 +620,8 @@ def enviar_publicacion(publicacion, user, bot, cursor, admin, lote_publicaciones
                 
             except:
                 cursor.execute('SELECT * FROM CANALES')
-                for canal_error in cursor.fetchall():
+                dict_temp[admin] = cursor.fetchall()
+                for canal_error in dict_temp[admin]:
                     if canal_error[0]==canal:
                         bot.send_message(admin, f"No se pudo enviar el mensaje al canal/grupo: <b>{canal_error[1]}</b>, su ID es: <code>{canal_error[0]}</code>\n\nRevisa que yo posea los permisos administrativos y de publicar, o que el canal/grupo siquiera siga existiendo. Mi recomendación es que borre dicho Canal/Grupo de la Publicación y de la Base de Datos\n\n<u><b>Descripción del error</b></u>:\n{e}\n<u>Traceback error</u>:\n{traceback.print_exc()}", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌Eliminar Canal❌", callback_data=f"eliminar_canal_confirm:{canal}")]]))
                         
@@ -715,11 +719,11 @@ def ver_canal(call, bot, user, indice, cursor):
     lista_id=["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"]
     dict_temp[user]={}
     conexion, cursor = cargar_conexion()
+    err_msg = comprobar_canales(bot, conexion, cursor)
     maximo = 10
     indice_inicial=indice
     texto="A continuación la lista de canales disponibles, fíjate en el ID del canal y presiona el botón inferior correspondiente a dicho canal\n\n"
     
-    err_msg = comprobar_canales(bot, conexion, cursor)
     cursor.execute("SELECT ID FROM CANALES")
     lista_fetch=cursor.fetchall()
     
@@ -787,13 +791,14 @@ def ver_canal(call, bot, user, indice, cursor):
 def eliminar_canal(call, user , bot, cursor, indice, lista_seleccionada: list = []):
 
     # lista_seleccionada = ID de los canales seleccionados para eliminar
-    
+    conexion , cursor = cargar_conexion()
+    err_msg = comprobar_canales(bot, conexion, cursor)
     lote_publicaciones = cargar_variables()
     markup_canales=InlineKeyboardMarkup(row_width=1)
-    conexion , cursor = cargar_conexion()
+    
     indice_inicial=indice
     maximo = 6
-    err_msg = comprobar_canales(bot, conexion, cursor)
+    
     cursor.execute("SELECT ID FROM CANALES")
     lista_fetch=cursor.fetchall()
     
@@ -959,8 +964,13 @@ def change_channels(call, user , bot, indice, publicacion, tipo, operacion , lis
     indice_inicial=indice
     markup_canales=InlineKeyboardMarkup(row_width=1)
     maximo = 6
-    err_msg= comprobar_canales(bot, conexion, cursor, "❗Atención❗\nLos siguientes chats VINCULADOS a ESTA PUBLICACION han sido ELIMINADOS por algún error (la razón del error se especifica a la derecha del nombre del chat)\n\nASEGÚRATE de que ESTE BOT sea ADMINISTRADOR y tenga PERMISOS para enviar mensajes en dichos chats y vuelve a unirlos a aquí para recuperarlos:\n\n")
     conexion, cursor = cargar_conexion()
+    
+    if tipo != "anadir":
+        err_msg= comprobar_canales(bot, conexion, cursor, "❗Atención❗\nLos siguientes chats VINCULADOS a ESTA PUBLICACION han sido ELIMINADOS por algún error (la razón del error se especifica a la derecha del nombre del chat)\n\nASEGÚRATE de que ESTE BOT sea ADMINISTRADOR y tenga PERMISOS para enviar mensajes en dichos chats y vuelve a unirlos a aquí para recuperarlos:\n\n")
+    else:
+        err_msg= comprobar_canales(bot, conexion, cursor)
+        
     lote_publicaciones = cargar_variables()
     
     
@@ -1031,9 +1041,7 @@ def change_channels(call, user , bot, indice, publicacion, tipo, operacion , lis
 
     
     elif tipo == "anadir" :
-        
-        err_msg = comprobar_canales(bot, conexion, cursor)
-        
+                
         operacion = "ver_publicaciones/cc/anadir"
     
         cursor.execute("SELECT ID FROM CANALES")
@@ -1375,7 +1383,7 @@ def channel_register(message, bot, call, cursor, conexion, lote_publicaciones):
     
     #Esta variable definirá si hay base de datos o no, en caso de que no omitirá las comprobaciones de si el canal ingresado coincide con algun otro en la BD (Base de Datos)
 
-
+    lote_publicaciones = cargar_variables()
     dict_temp[call.from_user.id]=""
     
     try:
@@ -1392,180 +1400,93 @@ def channel_register(message, bot, call, cursor, conexion, lote_publicaciones):
             bot.send_message(call.message.chat.id, f"Ha ocurrido un error intentando crear el canal\n\nDescripción del error:\n{e}")    
         
     
-
     #Comprobaré si el usuario pasó una lista de canales
     
     lista=message.text.split(",")
-    if len(lista) > 1: 
-        #Al parecer si lo hizo
-        contador=0
-        
-        for num, canal in enumerate(lista, start=1):
-            canal=canal.strip()
-            
-            #llamar a la base de datos en cada iteración para asegurarse de que los canales enviados no se repiten en el mismo mensaje
-            try:
-                cursor.execute("SELECT * FROM CANALES")
-                lista_existente=cursor.fetchall()
-            
-            except Exception as e:
-                if "no such table" in e.args[0] :
-                    conexion, cursor = cargar_conexion()
-            #---------------------------------------------------
-                    
-        
-            if canal.isdigit() or canal.startswith("-"):
-                canal=int(canal)
-            
-            elif "t.me/" in str(canal):
-                canal = "@" + canal.split(r"/")[-1]
-            
-            elif not canal.startswith("@"):
-                canal=f"@{canal}"
-                
-                
-            try:
-                bot.get_chat_member(canal, bot.user.id).status
-            except Exception as e:
-                
-                if "member list is inaccessible" in str(e.args):
-                    dict_temp[call.from_user.id]+=f"❌¡Ni siquiera soy miembro de <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>)! Hazme admin ahí para poder agregarlo\n\n"
-                    continue
-                
-                else:
-                    try:
-                        dict_temp[call.from_user.id]+=f"❌¡Ha ocurrido un error con el chat de: <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>)!\n<u>Descripción del error</u>:\n{e}\n\n"
-                        
-                    except Exception as e:
-                        if "chat not found" in str(e.args):
-                            dict_temp[call.from_user.id]+=f"❌¡El chat ingresado en la posición #{num} no existe o no fué encontrado!\n\n"
-                        
-                    continue
-            
-            if not bot.get_chat_member(canal, bot.user.id).status == "administrator":
-                dict_temp[call.from_user.id]+=f"❌Ni siquiera soy administrador en el chat de <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>), dame los permisos de administrador para poder agregarlo a las publicaciones\n\n"
-                
-                continue
-            
-            elif not bot.get_chat_member(canal, bot.user.id).can_delete_messages:
-                dict_temp[call.from_user.id]+=f"❌No puedo eliminar mensajes en el chat de <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>), dame los permisos correspondientes DE ADMINISTRADOR para poder agregarlo a las publicaciones\n\n"
-                
-                continue
-            
-            
-            coincide = False
-            for i in lista_existente:
-                if i[0]==bot.get_chat(canal).id:
-                    dict_temp[call.from_user.id]+=f"❌¡El canal / grupo <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>) ya existe en la lista!\n\n"
-                    
-                    coincide = True
-                    break
-                
-            if coincide == True:
-                continue
-            
-            try:
-                cursor.execute("INSERT INTO CANALES VALUES (?,?)", (bot.get_chat(canal).id, bot.get_chat(canal).title))
-                conexion.commit()
-                
-                
-                contador+=1
-                
-                dict_temp[call.from_user.id]+=f"✅¡El canal / grupo <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>) ha sido agregado exitosamente!\n\n"
-                
-            
-                
-            except:
-                dict_temp[call.from_user.id]+=f"❌Al parecer ha ocurrido un Error con el canal/grupo <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>)\n<b>Asegúrate</b> de que dicho canal/grupo EXISTA Y que yo sea ADMINISTRADOR CON DERECHOS para ENVIAR MENSAJES para poderlo agregar a la lista, mientras tanto, lo omito\n\n"
-                
-                continue
-            
-        
-                
-
     
-    else:
-        #El usuario solamente pasó 1 canal
-        print("Pasó 1 canal")
+    #Al parecer si lo hizo
+    contador=0
+    
+    for num, canal in enumerate(lista, start=1):
+        canal=canal.strip()
         
+        #llamar a la base de datos en cada iteración para asegurarse de que los canales enviados no se repiten en el mismo mensaje
+        try:
+            cursor.execute("SELECT * FROM CANALES")
+            lista_existente=cursor.fetchall()
         
-        contador=0
-        if  message.text.startswith("@"):
-            canal = message.text
-            
-        elif r"t.me/" in message.text:
-            canal = "@" + message.text.split(r"/")[-1]
-        
-        elif message.text.isdigit() or message.text.startswith("-"):
-            canal=int(message.text)
+        except Exception as e:
+            if "no such table" in e.args[0] :
+                conexion, cursor = cargar_conexion()
+        #---------------------------------------------------
                 
-        elif not message.text.startswith("@"):
-            canal=f"@{message.text}"
-
+    
+        if canal.isdigit() or canal.startswith("-"):
+            canal=int(canal)
         
+        elif "t.me/" in str(canal):
+            canal = "@" + canal.split(r"/")[-1]
+        
+        elif not canal.startswith("@"):
+            canal=f"@{canal}"
+            
             
         try:
             bot.get_chat_member(canal, bot.user.id).status
-            
         except Exception as e:
-                
+            
             if "member list is inaccessible" in str(e.args):
-                dict_temp[call.from_user.id]+=f"❌¡Ni siquiera soy miembro de <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>)! Hazme admin ahí para poder agregarlo"
-
+                dict_temp[call.from_user.id]+=f"❌¡Ni siquiera soy miembro de <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>)! Hazme admin ahí para poder agregarlo\n\n"
+                continue
             
             else:
                 try:
-                    dict_temp[call.from_user.id]+=f"❌¡Ha ocurrido un error con el chat de: <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>)!\n\n<u>Descripción del error</u>\n{e}"
+                    dict_temp[call.from_user.id]+=f"❌¡Ha ocurrido un error con el chat de: <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>)!\n<u>Descripción del error</u>:\n{e}\n\n"
                     
-                except:
-                    dict_temp[call.from_user.id]+="❌¡Este chat o no existe o no soy capaz de acceder a él!\n\nOperacion Cancelada"
-
-            
-            bot.send_message(message.chat.id, dict_temp[call.from_user.id], reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Volver | Menú ♻", callback_data="volver_menu")]]))
-
-            
-            return
+                except Exception as e:
+                    if "chat not found" in str(e.args):
+                        dict_temp[call.from_user.id]+=f"❌¡El chat ingresado en la posición #{num} no existe o no fué encontrado!\n\n"
+                    
+                continue
         
         if not bot.get_chat_member(canal, bot.user.id).status == "administrator":
-            dict_temp[call.from_user.id]+=f"❌Ni siquiera soy administrador en el chat de <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>), dame los permisos de administrador para poder agregarlo a las publicaciones\n\n<b>Operación Cancelada</b>"
+            dict_temp[call.from_user.id]+=f"❌Ni siquiera soy administrador en el chat de <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>), dame los permisos de administrador para poder agregarlo a las publicaciones\n\n"
             
-            bot.send_message(message.chat.id, dict_temp[call.from_user.id], reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Volver | Menú ♻", callback_data="volver_menu")]]))
-            
-            return
+            continue
         
         elif not bot.get_chat_member(canal, bot.user.id).can_delete_messages:
-            dict_temp[call.from_user.id]+=f"❌No puedo eliminar mensajes en el chat de <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>), dame los permisos correspondientes DE ADMINISTRADOR para poder agregarlo a las publicaciones\n\n<b>Operación Cancelada</b>"
+            dict_temp[call.from_user.id]+=f"❌No puedo eliminar mensajes en el chat de <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>), dame los permisos correspondientes DE ADMINISTRADOR para poder agregarlo a las publicaciones\n\n"
             
-            bot.send_message(message.chat.id, dict_temp[call.from_user.id], reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Volver | Menú ♻", callback_data="volver_menu")]]))
-            
-            
-            return
+            continue
         
-
-
+        
+        coincide = False
         for i in lista_existente:
             if i[0]==bot.get_chat(canal).id:
-                dict_temp[call.from_user.id]+=f"❌¡El canal / grupo <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>) ya existe en la lista!\n\n<b>Operación Cancelada</b>"
+                dict_temp[call.from_user.id]+=f"❌¡El canal / grupo <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>) ya existe en la lista!\n\n"
                 
-                bot.send_message(message.chat.id, dict_temp[call.from_user.id], reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Volver | Menú ♻", callback_data="volver_menu")]]))
-
-                return
+                coincide = True
+                break
             
-
-            
-
-    
+        if coincide == True:
+            continue
+        
         try:
-            bot.get_chat(canal)
             cursor.execute("INSERT INTO CANALES VALUES (?,?)", (bot.get_chat(canal).id, bot.get_chat(canal).title))
             conexion.commit()
-            contador+=1
-
-        except Exception as e:
             
-            bot.send_message(message.chat.id, f"Al parecer ha ocurrido un Error con el canal/grupo de <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>)\n\n<b>Asegúrate</b> de que dicho canal/grupo EXISTA Y que yo sea ADMINISTRADOR CON DERECHOS para ENVIAR MENSAJES para poderlo agregar a la lista, mientras tanto, lo omito\n\n<u>Descripción del error</u>\n{e}\n\n<b>Operación Cancelada</b>") 
-
-            return
+            
+            contador+=1
+            
+            dict_temp[call.from_user.id]+=f"✅¡El canal / grupo <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>) ha sido agregado exitosamente!\n\n"
+            
+        
+            
+        except:
+            dict_temp[call.from_user.id]+=f"❌Al parecer ha ocurrido un Error con el canal/grupo <code>{canal}</code> (<a href='{bot.get_chat(canal).invite_link}'>{bot.get_chat(canal).title}</a>)\n<b>Asegúrate</b> de que dicho canal/grupo EXISTA Y que yo sea ADMINISTRADOR CON DERECHOS para ENVIAR MENSAJES para poderlo agregar a la lista, mientras tanto, lo omito\n\n"
+            
+            continue
+        
         
     
     if contador==0:

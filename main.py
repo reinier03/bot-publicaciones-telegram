@@ -227,9 +227,9 @@ def cmd_host_information(message):
                 dic_temp[message.from_user.id] = "No tengo ahora mismo una forma concreta de obtener la URL del host, de todas formas he obtenido algunas variables de entorno que pueden contener dicha dirección, por favor compruebalas para verificar:\n\n(nombre_variable = valor)\n"
                 contador = 0
                 for key, value in os.environ.items():
-                    if key in ["host", "url"]:
+                    if key.lower() in ["host", "url"]:
                         contador += 1
-                        dic_temp[message.from_user.id] += f"{e + 1}=>  {key} = <code>{value}</code>\n\n"
+                        dic_temp[message.from_user.id] += f"{contador}=>  {key} = <code>{value}</code>\n\n"
                         
                 if re.search(r"\d+", dic_temp[message.from_user.id]):
                     bot.send_message(message.chat.id, dic_temp[message.from_user.id])
@@ -309,7 +309,7 @@ def cmd_panel(call):
         os.remove("BD_Canales_prueba.db")
     
     
-    dic_temp[call.from_user.id] = f"Bienvenido {bot.get_chat(call.from_user.id).first_name} :D ¿En qué te puedo ayudar?"
+    dic_temp[call.from_user.id] = f"Bienvenido {bot.get_chat(call.from_user.id).first_name} ;D ¿En qué te puedo ayudar?"
     
     
     try:

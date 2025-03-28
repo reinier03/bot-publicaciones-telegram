@@ -76,47 +76,56 @@ def main_handler(bot,call, cursor, admin , conexion, lote_publicaciones, lista_c
                 if not "Publicaciones_media" in os.listdir(ruta_root):
                     os.mkdir(os.path.join(ruta_root, "Publicaciones_media"))
                     
-                
-                if message.content_type=="photo":
-                    with open(os.path.join(os.path.abspath(os.path.join(ruta_root ,"Publicaciones_media")) , f"{len(lote_publicaciones)+1}_{os.path.basename(bot.get_file(message.photo[-1].file_id).file_path)}"), "wb") as archivo:
-                        archivo.write(bot.download_file(bot.get_file(message.photo[-1].file_id).file_path))
-                        archivo_multimedia=[os.path.abspath(archivo.name), "photo"]
-                
-                elif message.content_type == "voice":
-                    with open(os.path.join(os.path.abspath(os.path.join(ruta_root ,"Publicaciones_media")), f"{len(lote_publicaciones)+1}_{os.path.basename(bot.get_file(message.voice.file_id).file_path)}"), "wb") as archivo:
-                        archivo.write(bot.download_file(bot.get_file(message.voice.file_id).file_path))
-                        archivo_multimedia=[os.path.abspath(archivo.name), "voice"]
-                        
-                elif message.content_type=="video":
-                    with open(os.path.join(os.path.abspath(os.path.join(ruta_root ,"Publicaciones_media")), f"{len(lote_publicaciones)+1}_{os.path.basename(bot.get_file(message.video.file_id).file_path)}"), "wb") as archivo:
-                        archivo.write(bot.download_file(bot.get_file(message.video.file_id).file_path))
-                        archivo_multimedia=[os.path.abspath(archivo.name), "video"]
-                        
-                        
-                elif message.content_type=="audio":
+                try:
+                    if message.content_type=="photo":
+                        with open(os.path.join(os.path.abspath(os.path.join(ruta_root ,"Publicaciones_media")) , f"{len(lote_publicaciones)+1}_{os.path.basename(bot.get_file(message.photo[-1].file_id).file_path)}"), "wb") as archivo:
+                            archivo.write(bot.download_file(bot.get_file(message.photo[-1].file_id).file_path))
+                            archivo_multimedia=[os.path.abspath(archivo.name), "photo"]
                     
-                    try:
-                        extension="." + str(os.path.basename(os.path.basename(bot.get_file(message.audio.file_id).file_path)).split(".")[-1])
-                        nombre=f"{message.audio.performer} - {message.audio.title}{extension}"
-                    except:
-                        contador=0
-                        for i in message.audio.file_name:
-                            if not i.isdigit():
-                                break
-                            else:
-                                contador+=1
-                                
-                        nombre={message.audio.file_name[contador:]}
+                    elif message.content_type == "voice":
+                        with open(os.path.join(os.path.abspath(os.path.join(ruta_root ,"Publicaciones_media")), f"{len(lote_publicaciones)+1}_{os.path.basename(bot.get_file(message.voice.file_id).file_path)}"), "wb") as archivo:
+                            archivo.write(bot.download_file(bot.get_file(message.voice.file_id).file_path))
+                            archivo_multimedia=[os.path.abspath(archivo.name), "voice"]
+                            
+                    elif message.content_type=="video":
+                        with open(os.path.join(os.path.abspath(os.path.join(ruta_root ,"Publicaciones_media")), f"{len(lote_publicaciones)+1}_{os.path.basename(bot.get_file(message.video.file_id).file_path)}"), "wb") as archivo:
+                            archivo.write(bot.download_file(bot.get_file(message.video.file_id).file_path))
+                            archivo_multimedia=[os.path.abspath(archivo.name), "video"]
+                            
+                            
+                    elif message.content_type=="audio":
                         
-                    with open(os.path.join(os.path.abspath(os.path.join(ruta_root ,"Publicaciones_media")) , f"{len(lote_publicaciones)+1}_{nombre}"), "wb") as archivo:
-                        archivo.write(bot.download_file(bot.get_file(message.audio.file_id).file_path))
-                        archivo_multimedia=[os.path.abspath(archivo.name), "audio"]
+                        try:
+                            extension="." + str(os.path.basename(os.path.basename(bot.get_file(message.audio.file_id).file_path)).split(".")[-1])
+                            nombre=f"{message.audio.performer} - {message.audio.title}{extension}"
+                        except:
+                            contador=0
+                            for i in message.audio.file_name:
+                                if not i.isdigit():
+                                    break
+                                else:
+                                    contador+=1
+                                    
+                            nombre={message.audio.file_name[contador:]}
+                            
+                        with open(os.path.join(os.path.abspath(os.path.join(ruta_root ,"Publicaciones_media")) , f"{len(lote_publicaciones)+1}_{nombre}"), "wb") as archivo:
+                            archivo.write(bot.download_file(bot.get_file(message.audio.file_id).file_path))
+                            archivo_multimedia=[os.path.abspath(archivo.name), "audio"]
+                            
+                            
+                    elif message.content_type=="document":
+                        with open(os.path.join(os.path.abspath(os.path.join(ruta_root ,"Publicaciones_media")) ,f"{len(lote_publicaciones)+1}_{os.path.basename(bot.get_file(message.document.file_id).file_path)}"), "wb") as archivo:
+                            archivo.write(bot.download_file(bot.get_file(message.document.file_id).file_path))
+                            archivo_multimedia=[os.path.abspath(archivo.name), "document"]
+                            
+                except Exception as e:
+                    if "file is too big" in str(e.args):
+                        bot.send_message(message.chat.id, "Al parecer el archivo que enviaste era demasiado grande :(\nEl límete de tamaño debe der ser 20 MB\n\nOperación cancelada")
                         
+                    else:
+                        bot.send_message(message.chat.id, f"Ha ocurrido un error desconocido :( Operación cancelada\n\nDescripción del error:\n{e.args}")
                         
-                elif message.content_type=="document":
-                    with open(os.path.join(os.path.abspath(os.path.join(ruta_root ,"Publicaciones_media")) ,f"{len(lote_publicaciones)+1}_{os.path.basename(bot.get_file(message.document.file_id).file_path)}"), "wb") as archivo:
-                        archivo.write(bot.download_file(bot.get_file(message.document.file_id).file_path))
-                        archivo_multimedia=[os.path.abspath(archivo.name), "document"]
+                    return "ERROR"
                         
         
                         
@@ -131,6 +140,7 @@ def main_handler(bot,call, cursor, admin , conexion, lote_publicaciones, lista_c
                     
                     else:
                         texto_publicacion[message.chat.id]=[False, False]
+                        bot.send_message(message.chat.id, "La publicación no tiene ¡NADA! ¡Ni archivos adjuntos ni texto!\nEs mejor que ni la tenga en cuenta :/\n\nOperación cancelada, presiona /panel")
                         return "ERROR"
 
                     return
@@ -166,7 +176,6 @@ def main_handler(bot,call, cursor, admin , conexion, lote_publicaciones, lista_c
                 #si no es solamente un mensaje de texto...Comprobar
                 res = comprobar_medios(message, texto_publicacion)
                 if res == "ERROR":
-                    bot.send_message(message.chat.id, "La publicación no tiene ¡NADA! ¡Ni archivos adjuntos ni texto!\nEs mejor que ni la tenga en cuenta :/\n\nOperación cancelada, presiona /panel")
                     return
             
 
@@ -595,7 +604,7 @@ def main_handler(bot,call, cursor, admin , conexion, lote_publicaciones, lista_c
              
             dict_temp[call.from_user.id] = lista_seleccionada.copy()
             
-            msg=bot.send_message(call.message.chat.id, "A continuación, haz la publicación o reenvíala aquí :)\n\n<u><b>Ayuda para crear publicaciones en este bot</b></u>\nA continuación, pondré los formatos que debes de introducir en la izquierda y en la derecha el resultado en el texto que sale:\n\n\n<code>{{n}}Texto en Negrita{{n}}</code> : <b>Texto en negrita</b>\n<code>{{s}}Texto en Subrayado{{s}}</code> : <u>Texto en subrayado</u>\n<code>{{i}}Texto en Itálica{{i}}</code> : <i>Texto en italica</i>\n<code>{{m}}Texto en Monoespaciado{{m}}</code> : <code>Texto en Monoespaciado</code>\n<code>{{b}}%Texto del botón% &Enlace del botón&{{b}}</code> : (el botón es el que está debajo de este mensaje)\n\nTambién puedes adjuntar fotos, audios o documentos al mensaje ;D\n\nAhora envía tu mensaje :D", reply_markup=InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton("Texto del botón", url="https://google.com")))
+            msg=bot.send_message(call.message.chat.id, "A continuación, haz la publicación o reenvíala aquí :)\n\n<u><b>Ayuda para crear publicaciones en este bot</b></u>\nA continuación, pondré los formatos que debes de introducir en la izquierda y en la derecha el resultado en el texto que sale:\n\n\n<code>{{n}}Texto en Negrita{{n}}</code> : <b>Texto en negrita</b>\n<code>{{s}}Texto en Subrayado{{s}}</code> : <u>Texto en subrayado</u>\n<code>{{i}}Texto en Itálica{{i}}</code> : <i>Texto en italica</i>\n<code>{{m}}Texto en Monoespaciado{{m}}</code> : <code>Texto en Monoespaciado</code>\n<code>{{b}}%Texto del botón% &Enlace del botón&{{b}}</code> : (el botón es el que está debajo de este mensaje)\n\nTambién puedes adjuntar fotos, audios o documentos al mensaje ;D \n(OJO: El tamaño no puede sobrepasar los 20 MB o obtendrás un error)\n\nAhora envía tu mensaje :D", reply_markup=InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton("Texto del botón", url="https://google.com")))
             
             lista_seleccionada.clear()
             
